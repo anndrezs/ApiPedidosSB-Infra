@@ -1,0 +1,117 @@
+PEDIFLOW - DOCUMENTACAO DO BANCO POSTGRESQL
+============================================
+
+Objetivo
+--------
+Este documento descreve o banco PostgreSQL usado pela API do sistema de pedidos.
+O frontend acessa os dados por meio da API; o schema.sql prepara as tabelas
+persistentes e nao e executado automaticamente pelo frontend.
+
+Arquivos
+--------
+- schema.sql: extensoes, tipos, tabelas, regras, indices, triggers e views.
+- database.config.js: configuracao futura da conexao usando variaveis de ambiente.
+
+Modelo de dados
+---------------
+
+1. companies
+   Representa a empresa/conta do sistema.
+   Campos principais:
+   - id: identificador UUID.
+   - name: nome da empresa.
+   - theme: light ou dark.
+   - accent: purple, green, blue, red, gray, pink, yellow ou orange.
+   - avatar_data: imagem do perfil em Data URL ou referencia futura de storage.
+   - created_at e updated_at: auditoria basica.
+
+2. clients
+   Clientes pertencentes a uma empresa.
+   - name: nome obrigatorio.
+   - phone: telefone opcional.
+   - active: controla se aparece para novos pedidos.
+   - company_id: empresa dona do cadastro.
+   Ao excluir uma empresa, seus clientes sao excluidos em cascata.
+
+3. products
+   Catalogo de produtos e seus precos.
+   - name: nome obrigatorio.
+   - price: preco positivo com duas casas decimais.
+   - company_id: empresa dona do produto.
+
+4. orders
+   Pedidos da empresa.
+   - client_id: cliente relacionado; fica nulo se o cliente for excluido.
+   - delivery_date: data de entrega.
+   - status: pending, ready ou delivered.
+   - observation: observacao opcional de ate 240 caracteres.
+   - company_id: empresa dona do pedido.
+
+5. order_items
+   Produtos que fazem parte de um pedido.
+   - quantity: quantidade inteira positiva.
+   - product_id: produto original, preservado como referencia opcional.
+   - product_name: snapshot do nome usado no pedido.
+   - unit_price: snapshot do preco praticado no pedido.
+   Os snapshots garantem que pedidos antigos nao mudem quando o catalogo for alterado.
+   Ao excluir um pedido, seus itens sao excluidos em cascata.
+
+6. shopping_lists
+   Listas de compras salvas pela empresa.
+   A data de criacao e mantida para o historico das listas.
+
+7. shopping_list_items
+   Itens de cada lista.
+   - name: nome do insumo.
+   - quantity: quantidade como texto, permitindo valores como "2 kg" ou "10 unidades".
+   Ao excluir uma lista, seus itens sao excluidos em cascata.
+
+Regras e seguranca dos dados
+----------------------------
+- UUIDs sao gerados pelo PostgreSQL com pgcrypto/gen_random_uuid().
+- Nomes nao podem ser vazios.
+- Precos devem ser maiores que zero.
+- Quantidades de pedidos devem ser inteiras e maiores que zero.
+- Observacoes possuem limite de 240 caracteres.
+- Status e preferencias usam ENUMs para impedir valores invalidos.
+- updated_at e atualizado automaticamente por triggers.
+- Indices foram criados para empresa, status, data, cliente e relacionamentos.
+- A view order_totals calcula o total de cada pedido.
+- A view daily_sales_by_client gera o agrupamento usado no relatorio diario.
+
+Relacionamentos
+---------------
+companies 1:N clients
+companies 1:N products
+companies 1:N orders
+companies 1:N shopping_lists
+clients 1:N orders
+orders 1:N order_items
+products 1:N order_items
+shopping_lists 1:N shopping_list_items
+
+Comportamento de exclusao
+-------------------------
+- Empresa: exclui seus clientes, produtos, pedidos e listas.
+- Cliente: pedidos permanecem, mas client_id fica nulo.
+- Produto: itens antigos permanecem com nome e preco registrados; product_id fica nulo.
+- Pedido: seus itens sao excluidos.
+- Lista: seus itens sao excluidos.
+
+Criacao do banco
+----------------
+1. Crie um banco PostgreSQL vazio, por exemplo: pediflow.
+2. Execute database/schema.sql nesse banco.
+
+Exemplo usando psql:
+  createdb pediflow
+  psql -d pediflow -f database/schema.sql
+
+Observacoes de integracao
+-------------------------
+- O frontend usa UUIDs compativeis com as colunas UUID do banco.
+- O preco deve ser copiado para order_items.unit_price no momento da criacao do pedido.
+- O avatar atualmente pode ser uma Data URL; em producao, prefira armazenamento de
+  arquivos e salve no banco somente a URL ou identificador do arquivo.
+- A coluna company_id permite evoluir para varias empresas sem alterar o modelo.
+- Nao existem credenciais neste repositorio. Use variaveis de ambiente na configuracao.
