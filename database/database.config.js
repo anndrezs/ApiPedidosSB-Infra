@@ -13,14 +13,12 @@
 
 // Configuração do PostgreSQL usada pela API (Render + Supabase)
 
-const databaseConfig = {
+export default {
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // Supabase exige SSL
-  host: 'db.foabxggxqgllkzqadily.supabase.co', // substitua pelo host exato do Supabase
-  port: 5432,
-  max: 10 // número máximo de conexões no pool
+  ssl: { rejectUnauthorized: false },
+  max: 10
 }
 
 //export default databaseConfig
 
-export default databaseConfig
+//export default databaseConfig
