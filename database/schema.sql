@@ -2,8 +2,8 @@
 -- Pediflow - schema PostgreSQL
 -- Estrutura persistente usada pela API do sistema.
 
-CREATE SCHEMA IF NOT EXISTS pediflow;
-SET search_path TO pediflow;
+CREATE SCHEMA IF NOT EXISTS pediflowsb;
+SET search_path TO pediflowsb;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -55,6 +55,22 @@ CREATE TABLE IF NOT EXISTS companies (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  name VARCHAR(160) NOT NULL CHECK (length(trim(name)) > 0),
+  "user" VARCHAR(80) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role VARCHAR(30) NOT NULL DEFAULT 'owner',
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_company ON users(company_id);
+CREATE UNIQUE INDEX IF NOT EXISTS users_user_unique ON users (lower("user"));
 
 CREATE TABLE IF NOT EXISTS clients (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -114,6 +130,7 @@ CREATE TABLE IF NOT EXISTS shopping_list_items (
 
 CREATE TABLE IF NOT EXISTS relatorios (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
   tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('diario', 'semanal', 'mensal')),
   periodo DATE NOT NULL,
   dados JSONB NOT NULL DEFAULT '{}'::JSONB,

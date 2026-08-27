@@ -7,7 +7,7 @@ import { registerRoutes } from './routes.js'
 const app = express()
 const pool = new Pool(databaseConfig)
 const port = Number(process.env.API_PORT || 3000)
-const table = (name) => `pediflow.${name}`
+const table = (name) => `pediflowsb.${name}`
 const databaseDate = (value) => {
   if (typeof value === 'string') return value.slice(0, 10)
   const year = value.getFullYear()
@@ -19,14 +19,14 @@ const databaseDate = (value) => {
 app.use(express.json({ limit: '8mb' }))
 registerRoutes(app, pool)
 
-async function getCompany(client) {
-  const result = await client.query(`SELECT id, name, theme, accent, avatar_data FROM ${table('companies')} ORDER BY created_at LIMIT 1`)
-  if (result.rows[0]) return result.rows[0]
-  return (await client.query(`INSERT INTO ${table('companies')} (name) VALUES ($1) RETURNING id, name, theme, accent, avatar_data`, ['Atelie da Nanda'])).rows[0]
+async function getCompany(client, companyId) {
+  const result = await client.query(`SELECT id, name, theme, accent, avatar_data FROM ${table('companies')} WHERE id = $1`, [companyId])
+  if (!result.rows[0]) throw new Error('Empresa nao encontrada.')
+  return result.rows[0]
 }
 
-async function readState(client) {
-  const company = await getCompany(client)
+async function readState(client, companyId) {
+  const company = await getCompany(client, companyId)
   const clients = await client.query(`SELECT id, name, phone, active FROM ${table('clients')} WHERE company_id = $1 ORDER BY created_at`, [company.id])
   const products = await client.query(`SELECT id, name, price FROM ${table('products')} WHERE company_id = $1 ORDER BY created_at`, [company.id])
   const orders = await client.query(`SELECT id, client_id, delivery_date, created_at::date AS created_at, status, observation FROM ${table('orders')} WHERE company_id = $1 ORDER BY created_at DESC`, [company.id])
@@ -63,12 +63,12 @@ async function readState(client) {
   }
 }
 
-async function writeState(state) {
+async function writeState(state, companyId) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const company = await getCompany(client)
-    await client.query(`UPDATE ${table('companies')} SET name = $1, theme = $2, accent = $3, avatar_data = $4 WHERE id = $5`, [state.company || 'Atelie da Nanda', state.theme || 'light', state.accent || 'orange', state.avatar || null, company.id])
+    const company = await getCompany(client, companyId)
+    await client.query(`UPDATE ${table('companies')} SET name = $1, theme = $2, accent = $3, avatar_data = $4 WHERE id = $5`, [state.company?.trim() || 'Empresa', state.theme || 'light', state.accent || 'orange', state.avatar || null, company.id])
     await client.query(`DELETE FROM ${table('order_items')} WHERE order_id IN (SELECT id FROM ${table('orders')} WHERE company_id = $1)`, [company.id])
     await client.query(`DELETE FROM ${table('orders')} WHERE company_id = $1`, [company.id])
     await client.query(`DELETE FROM ${table('shopping_list_items')} WHERE shopping_list_id IN (SELECT id FROM ${table('shopping_lists')} WHERE company_id = $1)`, [company.id])
@@ -113,11 +113,11 @@ app.get('/api/health', async (_request, response) => {
   }
 })
 
-app.get('/api/state', async (_request, response) => {
+app.get('/api/state', async (request, response) => {
   let client
   try {
     client = await pool.connect()
-    response.json(await readState(client))
+    response.json(await readState(client, request.user.companyId))
   } catch (error) {
     console.error(error)
     response.status(500).json({ error: 'Nao foi possivel carregar os dados do PostgreSQL.' })
@@ -128,7 +128,7 @@ app.get('/api/state', async (_request, response) => {
 
 app.put('/api/state', async (request, response) => {
   try {
-    await writeState(request.body)
+    await writeState(request.body, request.user.companyId)
     response.status(204).end()
   } catch (error) {
     console.error(error)

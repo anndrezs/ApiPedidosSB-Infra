@@ -1,0 +1,63 @@
+10:24:09  START Executing for: 'PG_LOCAL' [PostgreSQL], Database: postgres, Schema: pediflowsb
+10:24:09  SUCCESS  [BEGIN - 0 rows, 0.001 secs]  OK. No rows were affected  
+BEGIN;
+10:24:09  WARNING  [CREATE - 0 rows, 0.001 secs]  OK. No rows were affected
+SQLWarning:
+SQL State: 42710 --- extensão "pgcrypto" já existe, ignorando  
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+10:24:09  FAILED  [DO - 0 rows, 0.003 secs]  [Code: 0, SQL State: 42601]  Unterminated dollar quote started at position 3 in SQL DO $$
+DECLARE
+  v_name CONSTANT TEXT := 'Administrador'. Expected terminating $$  [Script position: 53 - 55]  
+DO $$
+DECLARE
+  v_name CONSTANT TEXT := 'Administrador';
+10:24:09  FAILED  [V_EMAIL - 0 rows, 0.004 secs]  [Code: 0, SQL State: 42601]  ERRO: erro de sintaxe em ou próximo a "v_email"
+  Posição: 1  [Script position: 109 - 116]  
+v_email CONSTANT TEXT := 'admin@pediflow.local';
+10:24:09  FAILED  [V_PASSWORD - 0 rows, 0.004 secs]  [Code: 0, SQL State: 42601]  ERRO: erro de sintaxe em ou próximo a "v_password"
+  Posição: 57  [Script position: 216 - 226]  
+-- A senha sera convertida para bcrypt pelo pgcrypto.
+  v_password CONSTANT TEXT := 'mudar@123';
+10:24:09  FAILED  [V_COMPANY_ID - 0 rows, 0.003 secs]  [Code: 0, SQL State: 42601]  ERRO: erro de sintaxe em ou próximo a "v_company_id"
+  Posição: 1  [Script position: 259 - 271]  
+v_company_id UUID;
+10:24:09  FAILED  [BEGIN - 0 rows, 0.004 secs]  [Code: 0, SQL State: 42601]  ERRO: erro de sintaxe em ou próximo a "SELECT"
+  Posição: 9  [Script position: 286 - 292]  
+BEGIN
+  SELECT id
+    INTO v_company_id
+    FROM pediflowsb.companies
+   ORDER BY created_at
+   LIMIT 1
+   FOR UPDATE;
+10:24:09  FAILED  [IF - 0 rows, 0.005 secs]  [Code: 0, SQL State: 42601]  ERRO: erro de sintaxe em ou próximo a "IF"
+  Posição: 1  [Script position: 400 - 402]  
+IF v_company_id IS NULL THEN
+    INSERT INTO pediflowsb.companies (name)
+    VALUES ('Atelie da Nanda')
+    RETURNING id INTO v_company_id;
+10:24:09  FAILED  [END - 0 rows, 0.003 secs]  [Code: 0, SQL State: 42601]  ERRO: erro de sintaxe em ou próximo a "IF"
+  Posição: 5  [Script position: 546 - 549]  
+END IF;
+10:24:09  FAILED  [INSERT - 0 rows, 0.005 secs]  [Code: 0, SQL State: 25P02]  ERRO: transação atual foi interrompida, comandos ignorados até o fim do bloco de transação  
+INSERT INTO pediflowsb.users (company_id, name, email, password_hash, role, active)
+  VALUES (
+    v_company_id,
+    v_name,
+    lower(trim(v_email)),
+    crypt(v_password, gen_salt('bf', 12)),
+    'owner',
+    TRUE
+  )
+  ON CONFLICT (email) DO UPDATE
+    SET company_id = EXCLUDED.company_id,
+        name = EXCLUDED.name,
+        password_hash = EXCLUDED.password_hash,
+        role = EXCLUDED.role,
+        active = TRUE,
+        updated_at = NOW();
+10:24:09  FAILED  [END - 0 rows, 0.002 secs]  [Code: 0, SQL State: 42601]  Unterminated dollar quote started at position 4 in SQL END $$. Expected terminating $$  [Script position: 1010 - 1013]  
+END $$;
+10:24:09  SUCCESS  [COMMIT - 0 rows, 0.001 secs]  OK. No rows were affected  
+COMMIT;
+10:24:09  END Execution 12 statement(s) executed, 0 row(s) affected, exec/fetch time: 0.036/0.000 secs   [3 successful, 1 Warnings, 9 errors]

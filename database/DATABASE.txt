@@ -100,12 +100,11 @@ Comportamento de exclusao
 
 Criacao do banco
 ----------------
-1. Crie um banco PostgreSQL vazio, por exemplo: pediflow.
+1. Use o banco PostgreSQL `postgres`; o schema usado pela API e `pediflowsb`.
 2. Execute database/schema.sql nesse banco.
 
 Exemplo usando psql:
-  createdb pediflow
-  psql -d pediflow -f database/schema.sql
+   psql -d postgres -f database/schema.sql
 
 Observacoes de integracao
 -------------------------
