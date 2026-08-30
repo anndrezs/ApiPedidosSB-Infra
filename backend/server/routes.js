@@ -1,5 +1,6 @@
 import { authenticateToken, comparePassword, createToken, hashPassword } from './auth.js'
 import crypto from 'node:crypto'
+import { readState, writeState } from './index.js'
 
 const schema = 'pediflowsb'
 const table = (name) => `${schema}.${name}`
@@ -188,6 +189,41 @@ export function registerRoutes(app, pool) {
 
   app.use(authenticateToken)
   app.use((request, _response, next) => { request.companyId = request.user.companyId; next() })
+
+  app.get('/api/state', async (request, response) => {
+    let client
+    try {
+      client = await pool.connect()
+      response.json(await readState(client, request.companyId))
+    } catch (error) {
+      sendError(response, error)
+    } finally {
+      client?.release()
+    }
+  })
+
+  app.put('/api/state', async (request, response) => {
+    try {
+      await writeState(request.body, request.companyId)
+      response.status(204).end()
+    } catch (error) {
+      sendError(response, error)
+    }
+  })
+
+  app.get('/api/state/hash', async (request, response) => {
+    let client
+    try {
+      client = await pool.connect()
+      const state = await readState(client, request.companyId)
+      const hash = crypto.createHash('md5').update(JSON.stringify(state)).digest('hex')
+      response.json({ hash })
+    } catch (error) {
+      sendError(response, error)
+    } finally {
+      client?.release()
+    }
+  })
 
   app.get(['/api/clientes', '/clientes'], async (request, response) => {
     try {

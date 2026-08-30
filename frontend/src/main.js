@@ -1,5 +1,6 @@
 import './style.css'
 import { jsPDF } from 'jspdf'
+import { initSync, stopSync, notifyStateChange, getRemoteStateHash } from './sync.js'
 
 const localDateKey = (value) => {
   const year = value.getFullYear()
@@ -24,6 +25,8 @@ const save = () => {
     const response = await fetch(apiUrl('/api/state'), { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(snapshot) })
     if (response.status === 401) { token = null; localStorage.removeItem(authKey); showLogin('Sua sessao expirou.') ; return }
     if (!response.ok) throw new Error('Falha ao salvar os dados')
+    // Notificar outras abas/dispositivos que o estado mudou
+    notifyStateChange()
   }).catch((error) => {
     flash('Nao foi possivel salvar no banco de dados')
     console.error(error)
@@ -376,6 +379,28 @@ function showLogin(message = '') {
 }
 function bindPasswordToggles() { document.querySelectorAll('input[type="password"]').forEach((input) => { if (!input.parentElement.matches('.password-field')) addPasswordToggle(input) }); document.querySelectorAll('[data-password-toggle]').forEach((button) => { button.onclick = () => { const input = button.parentElement.querySelector('input'); const visible = input.type === 'text'; input.type = visible ? 'password' : 'text'; button.textContent = visible ? '◉' : '◌'; button.setAttribute('aria-label', visible ? 'Mostrar senha' : 'Ocultar senha'); button.title = visible ? 'Mostrar senha' : 'Ocultar senha' } }) }
 new MutationObserver(bindPasswordToggles).observe(document.body, { childList: true, subtree: true })
+
+/**
+ * Recarrega o estado do servidor
+ * Chamado pela sincronização quando mudanças são detectadas
+ */
+async function reloadState() {
+  try {
+    const response = await fetch(apiUrl('/api/state'), { headers: { Authorization: `Bearer ${token}` } })
+    if (response.status === 401) { token = null; localStorage.removeItem(authKey); showLogin('Sua sessao expirou.') ; return }
+    if (!response.ok) {
+      const details = await response.json().catch(() => ({}))
+      throw new Error(details.error || `A API retornou o erro ${response.status}.`)
+    }
+    state = await response.json()
+    render()
+    console.log('[Sync] Estado sincronizado do servidor')
+  } catch (error) {
+    console.error('[Sync] Erro ao sincronizar estado:', error.message)
+    flash('Nao foi possivel sincronizar os dados')
+  }
+}
+
 async function bootstrap() {
   try {
     if (!token) return showLogin()
@@ -388,6 +413,10 @@ async function bootstrap() {
     }
     state = await response.json()
     render()
+    
+    // Iniciar sincronização em tempo real (polling + BroadcastChannel)
+    const getStateHash = () => JSON.stringify(state).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0).toString(16)
+    initSync(apiBaseUrl, token, reloadState, getStateHash)
   } catch (error) {
     document.querySelector('#app').innerHTML = `<main class="main"><section class="content"><div class="empty"><strong>Nao foi possivel carregar o dashboard.</strong><p>${error.message || 'Confirme se o PostgreSQL e a API estao em execucao.'}</p><button class="primary" onclick="location.reload()">Tentar novamente</button></div></section></main>`
     console.error(error)

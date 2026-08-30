@@ -17,7 +17,6 @@ const databaseDate = (value) => {
 }
 
 app.use(express.json({ limit: '8mb' }))
-registerRoutes(app, pool)
 
 async function getCompany(client, companyId) {
   const result = await client.query(`SELECT id, name, theme, accent, avatar_data FROM ${table('companies')} WHERE id = $1`, [companyId])
@@ -104,35 +103,16 @@ async function writeState(state, companyId) {
   }
 }
 
+export { readState, writeState }
+
+registerRoutes(app, pool)
+
 app.get('/api/health', async (_request, response) => {
   try {
     await pool.query('SELECT 1')
     response.json({ ok: true })
   } catch (error) {
     response.status(503).json({ ok: false, error: error.message })
-  }
-})
-
-app.get('/api/state', async (request, response) => {
-  let client
-  try {
-    client = await pool.connect()
-    response.json(await readState(client, request.user.companyId))
-  } catch (error) {
-    console.error(error)
-    response.status(500).json({ error: 'Nao foi possivel carregar os dados do PostgreSQL.' })
-  } finally {
-    client?.release()
-  }
-})
-
-app.put('/api/state', async (request, response) => {
-  try {
-    await writeState(request.body, request.user.companyId)
-    response.status(204).end()
-  } catch (error) {
-    console.error(error)
-    response.status(500).json({ error: 'Nao foi possivel salvar os dados no PostgreSQL.' })
   }
 })
 
