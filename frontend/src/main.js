@@ -288,7 +288,7 @@ function orders() {
   document.querySelector('#orders-date').onchange = (event) => { ordersDate = event.target.value || today; orders() }
   document.querySelector('#export-orders').onclick = () => exportText(ordersExportText(list), `Pedidos_${date(ordersDate).replaceAll('/', '-')}.pdf`)
 }
-function separation() { const list = state.orders.filter((o) => o.delivery === separationDate); layout('Separacão', `<div class="page-actions"><p class="muted">Organize a producao por data de entrega.</p><button class="outline-button" id="export-separation">⇩ Exportar separacao</button></div><div class="date-select"><label>Data de entrega<input id="sep-date" type="date" value="${separationDate}"></label><div><strong>${list.length}</strong><span> pedidos encontrados</span></div></div><div class="separation-list">${list.length ? list.map((o) => { const [label, cls] = status(o.status); return `<article class="separation-card"><div class="separation-top"><div><h3>${client(o.clientId)?.name}</h3><span class="status ${cls}"><i></i>${label}</span></div><strong>${money(total(o))}</strong></div><div class="separation-items">${o.items.map((i) => `<div><b>${i.quantity}</b><span>${product(i.productId)?.name}</span></div>`).join('')}</div><p class="delivery-line">Data de entrega: ${date(o.delivery)}</p><div class="separation-actions"><button class="outline-button small" data-export-order="${o.id}">⇩ Exportar pedido</button>${o.status === 'pending' ? `<button class="outline-button" data-ready="${o.id}">✓ Marcar como separado</button>` : ''}${o.status !== 'delivered' ? `<button class="primary small" data-delivered="${o.id}">✓ Marcar como entregue</button>` : '<span class="delivered-note">Pedido entregue</span>'}</div></article>` }).join('') : empty('Nenhum pedido nesta data')}</div><div class="orders-total"><span>Valor total de todos os pedidos</span><strong>${money(ordersTotal(list))}</strong></div>`, 'Painel de operacao'); bind(); document.querySelector('#sep-date').onchange = (e) => { separationDate = e.target.value; separation() }; document.querySelector('#export-separation').onclick = () => exportText(ordersExportText(list), `Separacao_${date(separationDate).replaceAll('/', '-')}.pdf`); document.querySelectorAll('[data-export-order]').forEach((button) => button.onclick = () => { const order = state.orders.find((item) => item.id === button.dataset.exportOrder); if (order) exportText(orderText(order), orderFileName(order)) }) }
+function separation() { const list = state.orders.filter((o) => o.delivery === separationDate); layout('Separacão', `<div class="page-actions"><p class="muted">Organize a producao por data de entrega.</p><button class="outline-button" id="production-summary">◷ Resumo de Produção</button><button class="outline-button" id="export-separation">⇩ Exportar separacao</button></div><div class="date-select"><label>Data de entrega<input id="sep-date" type="date" value="${separationDate}"></label><div><strong>${list.length}</strong><span> pedidos encontrados</span></div></div><div class="separation-list">${list.length ? list.map((o) => { const [label, cls] = status(o.status); return `<article class="separation-card"><div class="separation-top"><div><h3>${client(o.clientId)?.name}</h3><span class="status ${cls}"><i></i>${label}</span></div><strong>${money(total(o))}</strong></div><div class="separation-items">${o.items.map((i) => `<div><b>${i.quantity}</b><span>${product(i.productId)?.name}</span></div>`).join('')}</div><p class="delivery-line">Data de entrega: ${date(o.delivery)}</p><div class="separation-actions"><button class="outline-button small" data-export-order="${o.id}">⇩ Exportar pedido</button>${o.status === 'pending' ? `<button class="outline-button" data-ready="${o.id}">✓ Marcar como separado</button>` : ''}${o.status !== 'delivered' ? `<button class="primary small" data-delivered="${o.id}">✓ Marcar como entregue</button>` : '<span class="delivered-note">Pedido entregue</span>'}</div></article>` }).join('') : empty('Nenhum pedido nesta data')}</div><div class="orders-total"><span>Valor total de todos os pedidos</span><strong>${money(ordersTotal(list))}</strong></div>`, 'Painel de operacao'); bind(); document.querySelector('#sep-date').onchange = (e) => { separationDate = e.target.value; separation() }; document.querySelector('#production-summary').onclick = () => showProductionSummary(list); document.querySelector('#export-separation').onclick = () => exportText(ordersExportText(list), `Separacao_${date(separationDate).replaceAll('/', '-')}.pdf`); document.querySelectorAll('[data-export-order]').forEach((button) => button.onclick = () => { const order = state.orders.find((item) => item.id === button.dataset.exportOrder); if (order) exportText(orderText(order), orderFileName(order)) }) }
 function shopping() { layout('Lista de compras', `<div class="page-actions"><p class="muted">Planeje os insumos da sua producao.</p><button class="primary" data-new-list>+ Nova lista</button></div><div class="split-layout"><div class="form-card"><div class="card-title"><h3>${edit ? 'Editar lista' : 'Nova lista'}</h3><span class="step">01</span></div><form id="shop-form"><div id="shop-items">${(edit?.items || [{ name: '', quantity: '' }]).map((i) => `<div class="order-item"><input name="item" value="${i.name}" placeholder="Item, ex: farinha" required><input name="qty" value="${i.quantity}" placeholder="Quantidade" required><button type="button" class="remove-item">×</button></div>`).join('')}</div><button type="button" class="text-button" id="add-shop">+ Adicionar item</button><button class="primary full">Salvar lista</button></form></div><div class="list-card"><div class="card-title"><div><h3>Listas salvas</h3><p>Suas listas recentes.</p></div></div>${state.shopping.length ? state.shopping.map((l) => `<div class="saved-list"><div><strong>Lista de compras</strong><small>${date(l.createdAt)} · ${l.items.length} itens</small></div><button class="outline-button" data-export-list="${l.id}">Exportar</button><button class="mini-button" data-edit-list="${l.id}">Editar</button><button class="danger-icon" data-delete-list="${l.id}">×</button></div>`).join('') : empty('Nenhuma lista salva')}</div></div>`, 'Painel de operacao'); bind(); document.querySelector('#add-shop').onclick = () => { document.querySelector('#shop-items').insertAdjacentHTML('beforeend', '<div class="order-item"><input name="item" placeholder="Item, ex: farinha" required><input name="qty" placeholder="Quantidade" required><button type="button" class="remove-item">×</button></div>'); removeButtons() }; removeButtons(); document.querySelector('#shop-form').onsubmit = (e) => { e.preventDefault(); const f = new FormData(e.target); const names = f.getAll('item'); const qty = f.getAll('qty'); const l = { id: edit?.id || id('l'), createdAt: edit?.createdAt || today, items: names.map((name, i) => ({ name, quantity: qty[i] })) }; state.shopping = edit ? state.shopping.map((x) => x.id === l.id ? l : x) : [l, ...state.shopping]; save(); edit = null; flash('Lista salva com sucesso'); shopping() } }
 function reportExportText(list, selectedDate) { const groups = [...list.reduce((map, order) => { const name = client(order.clientId)?.name || 'Cliente removido'; const group = map.get(name) || []; group.push(order); map.set(name, group); return map }, new Map())]; const details = groups.map(([name, orders]) => `${name}\n${orders.length} ${orders.length === 1 ? 'Pedido' : 'Pedidos'}\nValor total desse cliente: ${money(ordersTotal(orders))}`).join('\n-----------------------------------------------\n'); const sales = list.reduce((sum, order) => sum + total(order), 0); return `## Relatorio Diario - ${date(selectedDate)} ##\n${details}${details ? '\n' : ''}Total vendido: ${money(sales)}\nSoma final do dia: ${money(sales)}` }
 function reports() {
@@ -299,11 +299,12 @@ function reports() {
   const sales = list.reduce((sum, order) => sum + total(order), 0)
   const periodLabel = reportMode === 'day' ? date(reportDate) : reportRangeLabel(range)
   const weekOptions = weeks.map((week) => `<option value="${week.start}" ${week.start === reportWeekStart ? 'selected' : ''}>${reportRangeLabel(week)}</option>`).join('')
-  layout('Relatorios', `<div class="report-tabs"><button class="${reportMode === 'day' ? 'selected' : ''}" data-report-mode="day">Diario</button><button class="${reportMode === 'week' ? 'selected' : ''}" data-report-mode="week">Semanal</button><button class="${reportMode === 'month' ? 'selected' : ''}" data-report-mode="month">Mensal</button></div><div class="report-header"><div><p class="muted">Resumo financeiro · ${periodLabel}</p><h2>Relatorios de vendas</h2></div><button class="outline-button" id="export-report">⇩ Exportar relatorio</button></div><div class="report-date"><label>${reportMode === 'week' ? 'Intervalo da semana<select id="report-week">${weekOptions}</select>' : 'Data do relatório<input id="report-date" type="date" value="' + reportDate + '">'}</label><span>${reportMode === 'day' ? 'Por padrão, hoje' : reportMode === 'week' ? 'Semanas de segunda a domingo' : 'Do primeiro ao último dia do mês'}</span></div><div class="report-grid"><article><span>Pedidos no periodo</span><strong>${list.length}</strong><small>Todos os pedidos registrados</small></article><article><span>Total vendido</span><strong>${money(sales)}</strong><small>Valor bruto das encomendas</small></article><article><span>Ticket medio</span><strong>${money(list.length ? sales / list.length : 0)}</strong><small>Media por pedido</small></article></div>`, 'Painel de operacao')
+  layout('Relatorios', `<div class="report-tabs"><button class="${reportMode === 'day' ? 'selected' : ''}" data-report-mode="day">Diario</button><button class="${reportMode === 'week' ? 'selected' : ''}" data-report-mode="week">Semanal</button><button class="${reportMode === 'month' ? 'selected' : ''}" data-report-mode="month">Mensal</button></div><div class="report-header"><div><p class="muted">Resumo financeiro · ${periodLabel}</p><h2>Relatorios de vendas</h2></div><button class="outline-button" id="custom-report">◒ Relatório Personalizado</button><button class="outline-button" id="export-report">⇩ Exportar relatorio</button></div><div class="report-date"><label>${reportMode === 'week' ? 'Intervalo da semana<select id="report-week">${weekOptions}</select>' : 'Data do relatório<input id="report-date" type="date" value="' + reportDate + '">'}</label><span>${reportMode === 'day' ? 'Por padrão, hoje' : reportMode === 'week' ? 'Semanas de segunda a domingo' : 'Do primeiro ao último dia do mês'}</span></div><div class="report-grid"><article><span>Pedidos no periodo</span><strong>${list.length}</strong><small>Todos os pedidos registrados</small></article><article><span>Total vendido</span><strong>${money(sales)}</strong><small>Valor bruto das encomendas</small></article><article><span>Ticket medio</span><strong>${money(list.length ? sales / list.length : 0)}</strong><small>Media por pedido</small></article></div>`, 'Painel de operacao')
   bind()
   document.querySelectorAll('[data-report-mode]').forEach((button) => button.onclick = () => { reportMode = button.dataset.reportMode; if (reportMode === 'week') reportWeekStart = reportPeriod('week', reportDate).start; reports() })
   document.querySelector('#report-date')?.addEventListener('change', (event) => { reportDate = event.target.value || today; if (reportMode === 'week') reportWeekStart = reportPeriod('week', reportDate).start; reports() })
   document.querySelector('#report-week')?.addEventListener('change', (event) => { reportWeekStart = event.target.value; reports() })
+  document.querySelector('#custom-report').onclick = showCustomReport
   document.querySelector('#export-report').onclick = () => exportText(reportExportText(list, range.start), `Relatorio_${reportMode}_${range.start}_${range.end}.pdf`)
 }
 async function administrationLegacy() { if (currentUser?.role !== 'owner') return overview(); layout('Administracao', `<div class="page-actions"><p class="muted">Crie e gerencie os acessos ao sistema.</p></div><div class="split-layout"><div class="form-card"><div class="card-title"><div><h3>Novo usuario</h3><p>Cada usuario recebe um dashboard separado.</p></div><span class="step">01</span></div><form id="user-form"><label>Nome completo<input name="name" required placeholder="Ex: Marina Costa"></label><label>Usuario<input name="user" required placeholder="Ex: marina"></label><label>Email<input name="email" type="email" required placeholder="marina@empresa.com"></label><label>Nome da empresa<input name="companyName" placeholder="Empresa do usuario"></label><label>Senha<div class="generated-password"><input name="password" type="text" minlength="8" required><button type="button" class="icon-button" id="generate-password" title="Gerar senha" aria-label="Gerar senha">↻</button></div></label><button type="submit" class="primary full">Criar usuario</button></form></div><div class="list-card"><div class="card-title"><div><h3>Usuarios cadastrados</h3><p>Contas ativas podem acessar o sistema.</p></div></div><div id="users-list"><div class="empty"><strong>Carregando usuarios...</strong></div></div></div></div>`, 'Controle de acesso')
@@ -348,6 +349,157 @@ document.addEventListener('click', (e) => { const button = e.target.closest('[da
 const shoppingListObserver = new MutationObserver(addShoppingPreviewButtons)
 shoppingListObserver.observe(document.querySelector('#app'), { childList: true, subtree: true })
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeShoppingPreview() })
+function getProductionSummary(orders) {
+  const summary = new Map()
+  let totalUnits = 0
+  orders.forEach((order) => {
+    order.items.forEach((item) => {
+      const name = item.productName || product(item.productId)?.name || 'Produto removido'
+      const qty = Number(item.quantity) || 0
+      summary.set(name, (summary.get(name) || 0) + qty)
+      totalUnits += qty
+    })
+  })
+  return { summary: Array.from(summary.entries()).map(([name, quantity]) => ({ name, quantity })), totalUnits }
+}
+
+function getSalesSummary(orders) {
+  const totalValue = orders.reduce((sum, order) => sum + total(order), 0)
+  return { orderCount: orders.length, totalValue, averageTicket: orders.length ? totalValue / orders.length : 0 }
+}
+
+function getCustomReportOrders(mode, anchor, customStart, customEnd) {
+  if (mode === 'custom') {
+    if (!customStart || !customEnd) return []
+    return state.orders.filter((o) => o.delivery >= customStart && o.delivery <= customEnd)
+  }
+  const range = reportPeriod(mode, anchor)
+  return state.orders.filter((o) => o.delivery >= range.start && o.delivery <= range.end)
+}
+
+function getCustomReportPeriodLabel(mode, anchor, customStart, customEnd) {
+  if (mode === 'custom') {
+    if (customStart && customEnd) return `${date(customStart)} a ${date(customEnd)}`
+    return 'Selecione um período'
+  }
+  return reportRangeLabel(reportPeriod(mode, anchor))
+}
+
+function productionPDFText(summary, totalUnits, dateLabel) {
+  const lines = [
+    `## Resumo de Produção${dateLabel ? ` - ${dateLabel}` : ''} ##`,
+    ...summary.map((item) => `- ${item.name}: ${item.quantity} unidades`),
+    `Total geral: ${totalUnits} unidades`
+  ]
+  return lines.join('\n')
+}
+
+function customReportPDFText(type, orders, periodLabel) {
+  const typeLabel = type === 'production' ? 'Produção' : type === 'sales' ? 'Vendas' : 'Geral'
+  const lines = [`## Relatório ${typeLabel} - ${periodLabel} ##`]
+
+  if (type === 'production') {
+    const { summary, totalUnits } = getProductionSummary(orders)
+    lines.push(...summary.map((item) => `- ${item.name}: ${item.quantity} unidades`))
+    lines.push(`Total de produtos: ${totalUnits} unidades`)
+  } else if (type === 'sales') {
+    const sales = getSalesSummary(orders)
+    lines.push(`Total de pedidos: ${sales.orderCount}`)
+    lines.push(`Valor total: ${money(sales.totalValue)}`)
+  } else {
+    const production = getProductionSummary(orders)
+    const sales = getSalesSummary(orders)
+    lines.push(`Total de pedidos: ${sales.orderCount}`)
+    lines.push(...production.summary.map((item) => `- ${item.name}: ${item.quantity} unidades`))
+    lines.push(`Total de produtos: ${production.totalUnits} unidades`)
+    lines.push(`Faturamento: ${money(sales.totalValue)}`)
+  }
+
+  return lines.join('\n')
+}
+
+function showProductionSummary(orders) {
+  const { summary, totalUnits } = getProductionSummary(orders)
+  if (!summary.length) return flash('Nenhum produto encontrado para este resumo.')
+
+  const dateLabel = separationDate ? date(separationDate) : ''
+  const modal = document.createElement('div')
+  modal.className = 'production-modal confirm-modal show'
+  modal.innerHTML = `<div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="production-title"><span class="confirm-icon">◷</span><h2 id="production-title">Resumo de Produção</h2><p>${dateLabel ? `Data de entrega: ${dateLabel}` : ''}</p><div class="production-items">${summary.map((item) => `<div class="production-item"><span>${item.name}</span><strong>${item.quantity} unidades</strong></div>`).join('')}</div><div class="production-total"><span>Total geral</span><strong>${totalUnits} unidades</strong></div><div class="confirm-actions"><button type="button" class="ghost" data-close-production>Fechar</button><button type="button" class="primary" id="download-production">Baixar PDF</button></div></div>`
+  document.body.appendChild(modal)
+
+  const close = () => modal.remove()
+  modal.querySelector('[data-close-production]').onclick = close
+  modal.onclick = (event) => { if (event.target === modal) close() }
+
+  modal.querySelector('#download-production').onclick = () => {
+    const text = productionPDFText(summary, totalUnits, dateLabel)
+    const name = `Resumo_Producao_${separationDate || today}.pdf`.replaceAll('/', '-')
+    exportText(text, name)
+  }
+}
+
+function showCustomReport() {
+  const modal = document.createElement('div')
+  modal.className = 'custom-report-modal confirm-modal show'
+  modal.innerHTML = `<div class="confirm-card custom-report-card" role="dialog" aria-modal="true" aria-labelledby="custom-report-title"><span class="confirm-icon">◒</span><h2 id="custom-report-title">Relatório Personalizado</h2><div class="report-form"><label>Período<select id="custom-report-mode"><option value="day">Hoje</option><option value="week">Esta semana</option><option value="month">Este mês</option><option value="custom">Período personalizado</option></select></label><div id="custom-dates" style="display:none"><label>Data inicial<input type="date" id="custom-start" value="${today}"></label><label>Data final<input type="date" id="custom-end" value="${today}"></label></div><label>Tipo<select id="custom-report-type"><option value="production">Produção</option><option value="sales">Vendas</option><option value="general">Geral</option></select></label></div><div id="report-result"></div><div class="confirm-actions"><button type="button" class="ghost" data-close-custom-report>Fechar</button><button type="button" class="primary" id="generate-custom-report">Gerar</button><button type="button" class="outline-button" id="download-custom-report" style="display:none">Baixar PDF</button></div></div>`
+  document.body.appendChild(modal)
+
+  const close = () => modal.remove()
+  modal.querySelector('[data-close-custom-report]').onclick = close
+  modal.onclick = (event) => { if (event.target === modal) close() }
+
+  const modeSelect = modal.querySelector('#custom-report-mode')
+  const customDates = modal.querySelector('#custom-dates')
+  modeSelect.onchange = () => { customDates.style.display = modeSelect.value === 'custom' ? 'grid' : 'none' }
+
+  let currentReportOrders = []
+  let currentReportPeriodLabel = ''
+
+  const renderResult = () => {
+    const type = modal.querySelector('#custom-report-type').value
+    const resultContainer = modal.querySelector('#report-result')
+    const downloadBtn = modal.querySelector('#download-custom-report')
+
+    if (!currentReportOrders.length) {
+      resultContainer.innerHTML = '<p class="muted">Nenhum pedido encontrado no período.</p>'
+      downloadBtn.style.display = 'none'
+      return
+    }
+
+    if (type === 'production') {
+      const { summary, totalUnits } = getProductionSummary(currentReportOrders)
+      resultContainer.innerHTML = `<div class="report-preview"><h4>Produção</h4>${summary.map((item) => `<div class="production-item"><span>${item.name}</span><strong>${item.quantity} unidades</strong></div>`).join('')}<div class="production-total"><span>Total</span><strong>${totalUnits} unidades</strong></div></div>`
+    } else if (type === 'sales') {
+      const sales = getSalesSummary(currentReportOrders)
+      resultContainer.innerHTML = `<div class="report-preview"><h4>Vendas</h4><div class="production-item"><span>Pedidos no período</span><strong>${sales.orderCount}</strong></div><div class="production-item"><span>Valor total</span><strong>${money(sales.totalValue)}</strong></div><div class="production-item"><span>Ticket médio</span><strong>${money(sales.averageTicket)}</strong></div></div>`
+    } else {
+      const production = getProductionSummary(currentReportOrders)
+      const sales = getSalesSummary(currentReportOrders)
+      resultContainer.innerHTML = `<div class="report-preview"><h4>Geral</h4><div class="production-item"><span>Total de pedidos</span><strong>${sales.orderCount}</strong></div>${production.summary.map((item) => `<div class="production-item"><span>${item.name}</span><strong>${item.quantity} unidades</strong></div>`).join('')}<div class="production-item"><span>Total de produtos</span><strong>${production.totalUnits} unidades</strong></div><div class="production-item"><span>Faturamento</span><strong>${money(sales.totalValue)}</strong></div></div>`
+    }
+
+    downloadBtn.style.display = 'inline-flex'
+  }
+
+  modal.querySelector('#generate-custom-report').onclick = () => {
+    const mode = modal.querySelector('#custom-report-mode').value
+    const anchor = reportDate || today
+    const customStart = modal.querySelector('#custom-start').value
+    const customEnd = modal.querySelector('#custom-end').value
+    currentReportOrders = getCustomReportOrders(mode, anchor, customStart, customEnd)
+    currentReportPeriodLabel = getCustomReportPeriodLabel(mode, anchor, customStart, customEnd)
+    renderResult()
+  }
+
+  modal.querySelector('#download-custom-report').onclick = () => {
+    const type = modal.querySelector('#custom-report-type').value
+    const text = customReportPDFText(type, currentReportOrders, currentReportPeriodLabel)
+    const name = `Relatorio_${type}_${currentReportPeriodLabel.replace(/[^a-z0-9]+/gi, '_')}.pdf`
+    exportText(text, name)
+  }
+}
+
 function render() { applyTheme(); ({ overview, clients, products, orders, separation, shopping, reports, settings, administration }[view] || overview)(); if (view === 'overview') enhanceOverview(); if (view === 'settings') enhanceSettings() }
 function showLogin(message = '') {
   document.documentElement.dataset.theme = 'light'
